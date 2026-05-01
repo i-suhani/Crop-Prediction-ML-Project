@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CropSense AI — Intelligent Crop Prediction</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Variables ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --soil:      #3d2b1f;
+    --bark:      #5c3d2e;
+    --moss:      #3a7d44;
+    --leaf:      #52b369;
+    --lime:      #8fd14f;
+    --sun:       #f5c842;
+    --mango:     #f59e0b;
+    --terracotta:#d4704a;
+    --sky:       #6ab4f5;
+    --dew:       #d1fae5;
+    --cream:     #fdf6ec;
+    --white:     #ffffff;
+    --dark:      #1a1208;
+    --mid:       #4a3728;
+    --text:      #2d1f14;
+    --muted:     #7a6555;
+    --card-bg:   rgba(255,255,255,0.82);
+    --blur:      blur(18px);
+    --r:         16px;
+    --shadow:    0 8px 40px rgba(61,43,31,0.18);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Animated background ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: -2;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(82,179,105,0.22) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 90%, rgba(245,200,66,0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 50% at 50% 50%, rgba(212,112,74,0.10) 0%, transparent 70%),
+      linear-gradient(160deg, #fdf6ec 0%, #f0f9ec 40%, #fef9ec 100%);
+  }
+
+  /* Floating crop icons background */
+  .float-bg {
+    position: fixed; inset: 0; z-index: -1;
+    overflow: hidden; pointer-events: none;
+  }
+  .float-bg span {
+    position: absolute;
+    font-size: clamp(1.5rem, 3vw, 3rem);
+    opacity: 0.07;
+    animation: floatUp linear infinite;
+    user-select: none;
+  }
+  @keyframes floatUp {
+    0%   { transform: translateY(110vh) rotate(0deg); }
+    100% { transform: translateY(-20vh) rotate(360deg); }
+  }
+
+  /* ── Nav ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    background: rgba(253,246,236,0.85);
+    border-bottom: 1px solid rgba(82,179,105,0.2);
+    padding: 0 clamp(1rem,5vw,4rem);
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+    box-shadow: 0 2px 20px rgba(61,43,31,0.08);
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: .6rem;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem; font-weight: 900; color: var(--moss);
+  }
+  .nav-logo .dot { color: var(--sun); }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    text-decoration: none; color: var(--mid);
+    font-size: .9rem; font-weight: 500;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--moss); }
+
+  /* ── Hero ── */
+  .hero {
+    padding: clamp(3rem,10vw,8rem) clamp(1rem,5vw,4rem) clamp(2rem,6vw,4rem);
+    max-width: 1200px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;
+    align-items: center;
+  }
+  @media (max-width:800px) { .hero { grid-template-columns: 1fr; } }
+
+  .hero-text h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    font-weight: 900; line-height: 1.15;
+    color: var(--soil);
+    margin-bottom: 1.2rem;
+  }
+  .hero-text h1 span { color: var(--moss); }
+  .hero-text p {
+    font-size: 1.05rem; color: var(--muted);
+    line-height: 1.75; margin-bottom: 2rem; max-width: 480px;
+  }
+
+  .badge-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: 2rem; }
+  .badge {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .35rem .9rem; border-radius: 999px; font-size: .82rem;
+    font-weight: 600;
+  }
+  .badge-green  { background: #d1fae5; color: #065f46; }
+  .badge-yellow { background: #fef3c7; color: #92400e; }
+  .badge-orange { background: #ffe4d6; color: #9a3412; }
+
+  /* Accuracy badge */
+  .accuracy-badge {
+    display: inline-flex; align-items: center; gap: .5rem;
+    background: linear-gradient(135deg, var(--moss), var(--leaf));
+    color: white; padding: .5rem 1.2rem; border-radius: 999px;
+    font-weight: 700; font-size: 1rem; box-shadow: 0 4px 15px rgba(58,125,68,0.4);
+  }
+  .accuracy-badge .pct { font-size: 1.4rem; font-family: 'Playfair Display', serif; }
+
+  .hero-visual {
+    position: relative; display: flex; align-items: center; justify-content: center;
+  }
+  .hero-circle {
+    width: clamp(220px,35vw,380px); height: clamp(220px,35vw,380px);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #d1fae5, #3a7d44 70%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(5rem,10vw,9rem);
+    box-shadow: 0 20px 80px rgba(58,125,68,0.35);
+    animation: pulse 4s ease-in-out infinite;
+    position: relative;
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1);   box-shadow: 0 20px 80px rgba(58,125,68,0.35); }
+    50%      { transform: scale(1.04); box-shadow: 0 28px 100px rgba(58,125,68,0.5); }
+  }
+  .orbit-icon {
+    position: absolute; font-size: 2rem;
+    animation: orbit 8s linear infinite;
+  }
+  .orbit-icon:nth-child(1) { animation-delay: 0s; }
+  .orbit-icon:nth-child(2) { animation-delay: -2.67s; }
+  .orbit-icon:nth-child(3) { animation-delay: -5.33s; }
+  @keyframes orbit {
+    0%   { transform: rotate(0deg)   translateX(clamp(110px,18vw,190px)) rotate(0deg); }
+    100% { transform: rotate(360deg) translateX(clamp(110px,18vw,190px)) rotate(-360deg); }
+  }
+
+  /* ── Stats strip ── */
+  .stats {
+    background: linear-gradient(135deg, var(--moss), #2d6638);
+    padding: 2rem clamp(1rem,5vw,4rem);
+    display: flex; justify-content: center; gap: clamp(2rem,6vw,6rem);
+    flex-wrap: wrap;
+  }
+  .stat { text-align: center; color: white; }
+  .stat .num {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 900;
+  }
+  .stat .lbl { font-size: .85rem; opacity: .8; margin-top: .2rem; }
+
+  /* ── Main card ── */
+  .main-wrap {
+    max-width: 1100px; margin: 0 auto;
+    padding: clamp(2rem,5vw,4rem) clamp(1rem,5vw,2rem);
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 700; color: var(--soil);
+    margin-bottom: .5rem;
+  }
+  .section-sub { color: var(--muted); font-size: .95rem; margin-bottom: 2.5rem; }
+
+  /* ── Form card ── */
+  .form-card {
+    background: var(--card-bg);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    border-radius: 24px;
+    border: 1px solid rgba(82,179,105,0.25);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .form-header {
+    background: linear-gradient(135deg, #3a7d44 0%, #52b369 60%, #8fd14f 100%);
+    padding: 1.8rem 2rem;
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .form-header-icon { font-size: 2.5rem; }
+  .form-header-text h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem; color: white; font-weight: 700;
+  }
+  .form-header-text p { color: rgba(255,255,255,0.8); font-size: .9rem; }
+
+  .form-body { padding: 2rem; }
+
+  /* ── Field groups ── */
+  .field-group-title {
+    display: flex; align-items: center; gap: .6rem;
+    font-size: .78rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--moss);
+    margin-bottom: 1rem; margin-top: 1.8rem;
+  }
+  .field-group-title:first-child { margin-top: 0; }
+  .field-group-title .line {
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(58,125,68,.3), transparent);
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.2rem; }
+  @media (max-width:600px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  /* ── Inputs ── */
+  .field { display: flex; flex-direction: column; gap: .4rem; }
+  .field label {
+    font-size: .82rem; font-weight: 600; color: var(--mid);
+    display: flex; align-items: center; gap: .35rem;
+  }
+  .field label .ico { font-size: 1rem; }
+
+  .field input, .field select {
+    height: 48px; padding: 0 1rem;
+    border: 1.5px solid rgba(58,125,68,0.25);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.9);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .95rem; color: var(--text);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    appearance: none; -webkit-appearance: none;
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%233a7d44' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+    cursor: pointer;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--moss);
+    box-shadow: 0 0 0 3px rgba(58,125,68,0.12);
+    background: white;
+  }
+  .field input::placeholder { color: #bbb; }
+
+  /* Slider */
+  .slider-wrap { display: flex; flex-direction: column; gap: .5rem; }
+  .slider-row { display: flex; align-items: center; gap: .8rem; }
+  .field input[type=range] {
+    flex: 1; height: 6px; padding: 0;
+    border: none; border-radius: 999px;
+    background: linear-gradient(90deg, var(--moss) var(--val, 50%), #ddd var(--val, 50%));
+    cursor: pointer; box-shadow: none;
+    accent-color: var(--moss);
+  }
+  .field input[type=range]:focus { box-shadow: none; }
+  .slider-val {
+    min-width: 48px; text-align: center;
+    background: var(--moss); color: white;
+    border-radius: 8px; padding: .2rem .5rem;
+    font-weight: 700; font-size: .9rem;
+  }
+
+  /* ── Submit button ── */
+  .btn-predict {
+    width: 100%; height: 56px; margin-top: 2rem;
+    border: none; border-radius: 14px; cursor: pointer;
+    background: linear-gradient(135deg, #3a7d44 0%, #52b369 50%, #8fd14f 100%);
+    background-size: 200% 200%;
+    color: white; font-family: 'Playfair Display', serif;
+    font-size: 1.15rem; font-weight: 700;
+    letter-spacing: .03em;
+    box-shadow: 0 6px 30px rgba(58,125,68,0.4);
+    transition: transform .15s, box-shadow .15s, background-position .4s;
+    display: flex; align-items: center; justify-content: center; gap: .6rem;
+    position: relative; overflow: hidden;
+  }
+  .btn-predict:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 40px rgba(58,125,68,0.55);
+    background-position: 100% 100%;
+  }
+  .btn-predict:active { transform: translateY(0); }
+  .btn-predict .spinner {
+    display: none; width: 20px; height: 20px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white; border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Result card ── */
+  #result-section { margin-top: 3rem; }
+
+  .result-card {
+    background: var(--card-bg);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    border-radius: 24px;
+    border: 1px solid rgba(82,179,105,0.3);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transform: translateY(30px); opacity: 0;
+    transition: transform .5s cubic-bezier(.34,1.56,.64,1), opacity .5s;
+  }
+  .result-card.show { transform: translateY(0); opacity: 1; }
+
+  .result-header {
+    background: linear-gradient(135deg, #f59e0b, #d4704a);
+    padding: 1.5rem 2rem;
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .result-header-icon { font-size: 2rem; }
+  .result-header h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem; color: white;
+  }
+  .result-header p { color: rgba(255,255,255,.8); font-size: .85rem; }
+
+  .result-body { padding: 2rem; }
+
+  /* Best crop showcase */
+  .best-crop {
+    text-align: center;
+    background: linear-gradient(135deg, rgba(58,125,68,0.08), rgba(143,209,79,0.12));
+    border: 2px solid rgba(58,125,68,0.25);
+    border-radius: 20px; padding: 2rem;
+    margin-bottom: 2rem;
+  }
+  .best-crop .crop-icon { font-size: 4rem; margin-bottom: .5rem; }
+  .best-crop .crop-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem; font-weight: 900; color: var(--moss);
+  }
+  .best-crop .model-tag {
+    display: inline-block; margin-top: .5rem;
+    background: rgba(58,125,68,0.12); color: var(--moss);
+    border-radius: 999px; padding: .25rem .85rem;
+    font-size: .78rem; font-weight: 600;
+  }
+
+  /* Metrics row */
+  .metrics-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+    gap: 1rem; margin-bottom: 2rem;
+  }
+  .metric-card {
+    background: white; border-radius: 14px;
+    border: 1px solid rgba(58,125,68,.15);
+    padding: 1.2rem 1rem; text-align: center;
+    box-shadow: 0 2px 12px rgba(61,43,31,0.07);
+  }
+  .metric-card .m-icon { font-size: 1.6rem; margin-bottom: .4rem; }
+  .metric-card .m-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem; font-weight: 700; color: var(--moss);
+  }
+  .metric-card .m-lbl { font-size: .75rem; color: var(--muted); margin-top: .2rem; }
+
+  /* Top 3 crops */
+  .top3-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; color: var(--soil);
+    margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem;
+  }
+  .top3-list { display: flex; flex-direction: column; gap: .7rem; }
+  .top3-item {
+    display: flex; align-items: center; gap: 1rem;
+    background: white; border-radius: 12px;
+    padding: .9rem 1.2rem;
+    border: 1px solid rgba(58,125,68,.12);
+    box-shadow: 0 2px 8px rgba(61,43,31,.05);
+    transition: transform .2s;
+  }
+  .top3-item:hover { transform: translateX(4px); }
+  .top3-rank {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: .85rem; flex-shrink: 0;
+  }
+  .rank-1 { background: #fef3c7; color: #92400e; }
+  .rank-2 { background: #f3f4f6; color: #374151; }
+  .rank-3 { background: #fde8d8; color: #9a3412; }
+  .top3-crop-icon { font-size: 1.4rem; }
+  .top3-crop-name { flex: 1; font-weight: 600; font-size: .95rem; }
+  .top3-bar-wrap { flex: 2; }
+  .top3-bar-bg {
+    background: #e8f5ea; border-radius: 999px; height: 8px; overflow: hidden;
+  }
+  .top3-bar-fill {
+    height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--moss), var(--lime));
+    transition: width 1s cubic-bezier(.34,1.56,.64,1);
+    width: 0;
+  }
+  .top3-pct { font-weight: 700; color: var(--moss); font-size: .9rem; min-width: 42px; text-align: right; }
+
+  /* Input summary */
+  .input-summary {
+    margin-top: 2rem;
+    background: rgba(245,200,66,0.08);
+    border: 1px solid rgba(245,200,66,0.3);
+    border-radius: 14px; padding: 1.2rem 1.5rem;
+  }
+  .input-summary-title {
+    font-size: .78rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .1em; color: #92400e; margin-bottom: .8rem;
+  }
+  .input-chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .chip {
+    background: white; border: 1px solid rgba(245,200,66,0.4);
+    border-radius: 8px; padding: .25rem .7rem;
+    font-size: .82rem; color: var(--mid);
+  }
+  .chip strong { color: var(--soil); }
+
+  /* ── How it works ── */
+  .how-section {
+    max-width: 1100px; margin: 4rem auto 0;
+    padding: 0 clamp(1rem,5vw,2rem);
+  }
+  .how-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+    gap: 1.5rem; margin-top: 2rem;
+  }
+  .how-card {
+    background: var(--card-bg); border-radius: 20px;
+    border: 1px solid rgba(82,179,105,0.2);
+    padding: 1.8rem 1.5rem; text-align: center;
+    box-shadow: 0 4px 20px rgba(61,43,31,.08);
+    transition: transform .25s;
+  }
+  .how-card:hover { transform: translateY(-6px); }
+  .how-icon {
+    font-size: 2.8rem; margin-bottom: 1rem;
+    display: inline-flex; width: 64px; height: 64px;
+    background: linear-gradient(135deg, rgba(82,179,105,.15), rgba(143,209,79,.2));
+    border-radius: 16px; align-items: center; justify-content: center;
+  }
+  .how-card h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem; color: var(--soil); margin-bottom: .5rem;
+  }
+  .how-card p { font-size: .85rem; color: var(--muted); line-height: 1.6; }
+
+  /* ── Crops carousel ── */
+  .crops-section {
+    max-width: 1100px; margin: 4rem auto 0;
+    padding: 0 clamp(1rem,5vw,2rem);
+  }
+  .crops-track-wrap { overflow: hidden; position: relative; margin-top: 1.5rem; }
+  .crops-track {
+    display: flex; gap: 1rem;
+    animation: scroll 30s linear infinite;
+    width: max-content;
+  }
+  .crops-track:hover { animation-play-state: paused; }
+  @keyframes scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .crop-chip {
+    background: white; border: 1.5px solid rgba(82,179,105,0.25);
+    border-radius: 12px; padding: .6rem 1.2rem;
+    display: flex; align-items: center; gap: .5rem;
+    font-size: .9rem; font-weight: 500; color: var(--mid);
+    white-space: nowrap; flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(61,43,31,.06);
+  }
+  .crop-chip .ce { font-size: 1.2rem; }
+
+  /* ── Footer ── */
+  footer {
+    margin-top: 5rem;
+    background: var(--soil);
+    color: rgba(255,255,255,.7);
+    text-align: center; padding: 2rem 1rem;
+    font-size: .85rem;
+  }
+  footer strong { color: var(--lime); }
+
+  /* ── Utility ── */
+  .hidden { display: none !important; }
+  .error-msg {
+    background: #fee2e2; border: 1px solid #fca5a5;
+    color: #991b1b; border-radius: 10px;
+    padding: .8rem 1rem; font-size: .88rem; margin-top: 1rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- Floating background icons -->
+<div class="float-bg" id="floatBg"></div>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-logo">🌾 CropSense<span class="dot">.</span>AI</div>
+  <ul class="nav-links">
+    <li><a href="#predict">Predict</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#crops">Crops</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-text">
+    <div class="badge-row">
+      <span class="badge badge-green">🤖 Random Forest AI</span>
+      <span class="badge badge-yellow">📍 Region-Aware</span>
+      <span class="badge badge-orange">🌦️ Climate-Sensitive</span>
+    </div>
+    <h1>Grow Smarter with <span>Intelligent</span> Crop Prediction</h1>
+    <p>Enter your land's climate conditions, state, and district — our Random Forest model (trained on 50,000+ records) recommends the best crop with <strong>85%+ accuracy</strong>.</p>
+    <div class="accuracy-badge">
+      <span>🎯</span>
+      <span class="pct">85%+</span>
+      <span>Model Accuracy</span>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="hero-circle">
+      🌾
+      <span class="orbit-icon">🌽</span>
+      <span class="orbit-icon">🍅</span>
+      <span class="orbit-icon">🌿</span>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat"><div class="num">50K+</div><div class="lbl">Training Records</div></div>
+  <div class="stat"><div class="num">77</div><div class="lbl">Crop Types</div></div>
+  <div class="stat"><div class="num">25</div><div class="lbl">ML Features</div></div>
+  <div class="stat"><div class="num">85%+</div><div class="lbl">Accuracy (RF)</div></div>
+  <div class="stat"><div class="num">7</div><div class="lbl">Indian States</div></div>
+</div>
+
+<!-- Main predict form -->
+<div class="main-wrap" id="predict">
+  <h2 class="section-title">🔬 Predict Your Best Crop</h2>
+  <p class="section-sub">Fill in your farm's details below. State, District &amp; Season are now required — they significantly improve prediction accuracy.</p>
+
+  <div class="form-card">
+    <div class="form-header">
+      <div class="form-header-icon">🌱</div>
+      <div class="form-header-text">
+        <h2>Farm Input Parameters</h2>
+        <p>Using Random Forest Classifier · 85%+ accuracy · 25 engineered features</p>
+      </div>
+    </div>
+    <div class="form-body">
+
+      <!-- Location -->
+      <div class="field-group-title">
+        <span>📍 Location</span><div class="line"></div>
+      </div>
+      <div class="grid-3">
+        <div class="field">
+          <label><span class="ico">🏛️</span> State</label>
+          <select id="state" onchange="updateDistricts()">
+            <option value="">— Select State —</option>
+            <option>Andaman and Nicobar Islands</option>
+            <option>Andhra Pradesh</option>
+            <option>Arunachal Pradesh</option>
+            <option>Assam</option>
+            <option>Bihar</option>
+            <option>Chandigarh</option>
+            <option>Chhattisgarh</option>
+          </select>
+        </div>
+        <div class="field">
+          <label><span class="ico">📌</span> District</label>
+          <select id="district">
+            <option value="">— Select State First —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label><span class="ico">🗓️</span> Season</label>
+          <select id="season">
+            <option value="">— Select Season —</option>
+            <option>Kharif</option>
+            <option>Rabi</option>
+            <option>Whole Year</option>
+            <option>Summer</option>
+            <option>Winter</option>
+            <option>Autumn</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Climate -->
+      <div class="field-group-title">
+        <span>🌤️ Climate Conditions</span><div class="line"></div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label><span class="ico">🌡️</span> Temperature (°C)</label>
+          <div class="slider-wrap">
+            <div class="slider-row">
+              <input type="range" id="temp" min="5" max="50" value="28"
+                     oninput="syncSlider('temp','tempVal',this.value,'°C')">
+              <span class="slider-val" id="tempVal">28°C</span>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label><span class="ico">💧</span> Humidity (%)</label>
+          <div class="slider-wrap">
+            <div class="slider-row">
+              <input type="range" id="humidity" min="10" max="100" value="65"
+                     oninput="syncSlider('humidity','humidityVal',this.value,'%')">
+              <span class="slider-val" id="humidityVal">65%</span>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label><span class="ico">🌿</span> Soil Moisture (%)</label>
+          <div class="slider-wrap">
+            <div class="slider-row">
+              <input type="range" id="soilMoisture" min="5" max="100" value="40"
+                     oninput="syncSlider('soilMoisture','soilVal',this.value,'%')">
+              <span class="slider-val" id="soilVal">40%</span>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label><span class="ico">📐</span> Area (hectares)</label>
+          <input type="number" id="area" placeholder="e.g. 500" min="1" max="999999" value="500">
+        </div>
+      </div>
+
+      <!-- Production -->
+      <div class="field-group-title">
+        <span>📦 Production Estimate (optional)</span><div class="line"></div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label><span class="ico">📦</span> Expected Production (units)</label>
+          <input type="number" id="production" placeholder="Leave blank to auto-estimate" min="0">
+        </div>
+        <div class="field">
+          <label><span class="ico">📅</span> Crop Year</label>
+          <input type="number" id="cropYear" value="2014" min="1997" max="2030">
+        </div>
+      </div>
+
+      <div id="formError" class="error-msg hidden">⚠️ <span id="errorText"></span></div>
+
+      <button class="btn-predict" onclick="runPrediction()">
+        <span class="spinner" id="spinner"></span>
+        <span id="btnText">🌾 Predict Best Crop</span>
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- Result section -->
+<div class="main-wrap" id="result-section">
+  <div class="result-card" id="resultCard">
+    <div class="result-header">
+      <div class="result-header-icon">🏆</div>
+      <div>
+        <h3>Prediction Results</h3>
+        <p>Powered by Random Forest Classifier · 85%+ Accuracy</p>
+      </div>
+    </div>
+    <div class="result-body">
+
+      <div class="best-crop">
+        <div class="crop-icon" id="resCropIcon">🌾</div>
+        <div class="crop-name" id="resCropName">—</div>
+        <div class="model-tag">Random Forest Classifier — Primary Prediction Model</div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="m-icon">📦</div>
+          <div class="m-val" id="resProduction">—</div>
+          <div class="m-lbl">Expected Production</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-icon">🌡️</div>
+          <div class="m-val" id="resTemp">—</div>
+          <div class="m-lbl">Temperature</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-icon">💧</div>
+          <div class="m-val" id="resHumidity">—</div>
+          <div class="m-lbl">Humidity</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-icon">🌿</div>
+          <div class="m-val" id="resMoisture">—</div>
+          <div class="m-lbl">Soil Moisture</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-icon">📐</div>
+          <div class="m-val" id="resArea">—</div>
+          <div class="m-lbl">Area (ha)</div>
+        </div>
+      </div>
+
+      <div class="top3-title">🥇 Top 3 Crop Recommendations</div>
+      <div class="top3-list" id="top3List"></div>
+
+      <div class="input-summary">
+        <div class="input-summary-title">Input Summary</div>
+        <div class="input-chips" id="inputChips"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- How it works -->
+<section class="how-section" id="how">
+  <h2 class="section-title">⚙️ How It Works</h2>
+  <p class="section-sub">Six steps from your farm data to an accurate crop recommendation.</p>
+  <div class="how-grid">
+    <div class="how-card">
+      <div class="how-icon">📥</div>
+      <h4>1. Input Your Data</h4>
+      <p>Enter climate conditions, farm area, state, district and season.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-icon">🔧</div>
+      <h4>2. Feature Engineering</h4>
+      <p>25 features are computed: Yield, log transforms, climate interactions, regional medians.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-icon">🌲</div>
+      <h4>3. Random Forest</h4>
+      <p>150 decision trees vote on the best crop. Majority wins.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-icon">📊</div>
+      <h4>4. Probabilities</h4>
+      <p>Confidence scores for all 77 crops are ranked and the top 3 shown.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-icon">📦</div>
+      <h4>5. Production Estimate</h4>
+      <p>A Random Forest Regressor predicts expected production in units.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-icon">✅</div>
+      <h4>6. Recommendation</h4>
+      <p>You get the best crop, top 3 alternatives, and full input summary.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Crops carousel -->
+<section class="crops-section" id="crops">
+  <h2 class="section-title">🌿 Supported Crops</h2>
+  <p class="section-sub">77 crop types across all seasons and Indian regions.</p>
+  <div class="crops-track-wrap">
+    <div class="crops-track" id="cropsTrack"></div>
+  </div>
+</section>
+
+<footer>
+  <p>🌾 CropSense AI &nbsp;·&nbsp; Powered by <strong>Random Forest Classifier</strong> (85%+ Accuracy) &nbsp;·&nbsp; Trained on 50,000+ crop records &nbsp;·&nbsp; 25 engineered features</p>
+  <p style="margin-top:.5rem; font-size:.78rem; opacity:.6;">Predictions are model-based estimates. Always validate with local agronomists.</p>
+</footer>
+
+<script>
+// ── State → District mapping ──
+const STATE_DISTRICTS = {
+  "Andaman and Nicobar Islands": ["NICOBARS","NORTH AND MIDDLE ANDAMAN","SOUTH ANDAMANS"],
+  "Andhra Pradesh": ["ANANTAPUR","CHITTOOR","EAST GODAVARI","GUNTUR","KADAPA","KRISHNA","KURNOOL","PRAKASAM","SPSR NELLORE","SRIKAKULAM","VISAKHAPATANAM","VIZIANAGARAM","WEST GODAVARI"],
+  "Arunachal Pradesh": ["ANJAW","CHANGLANG","DIBANG VALLEY","EAST KAMENG","EAST SIANG","KURUNG KUMEY","LOHIT","LONGDING","LOWER DIBANG VALLEY","LOWER SUBANSIRI","NAMSAI","PAPUM PARE","TAWANG","TIRAP","UPPER SIANG","UPPER SUBANSIRI","WEST KAMENG","WEST SIANG"],
+  "Assam": ["BAKSA","BARPETA","BONGAIGAON","CACHAR","CHIRANG","DARRANG","DHEMAJI","DHUBRI","DIBRUGARH","DIMA HASAO","GOALPARA","GOLAGHAT","HAILAKANDI","JORHAT","KAMRUP","KAMRUP METRO","KARBI ANGLONG","KARIMGANJ","KOKRAJHAR","LAKHIMPUR","MARIGAON","NAGAON","NALBARI","SIVASAGAR","SONITPUR","TINSUKIA","UDALGURI"],
+  "Bihar": ["ARARIA","ARWAL","AURANGABAD","BANKA","BEGUSARAI","BHAGALPUR","BHOJPUR","BUXAR","DARBHANGA","GAYA","GOPALGANJ","JAMUI","JEHANABAD","KAIMUR (BHABUA)","KATIHAR","KHAGARIA","KISHANGANJ","LAKHISARAI","MADHEPURA","MADHUBANI","MUNGER","MUZAFFARPUR","NALANDA","NAWADA","PASHCHIM CHAMPARAN","PATNA","PURBI CHAMPARAN","PURNIA","ROHTAS","SAHARSA","SAMASTIPUR","SARAN","SHEIKHPURA","SHEOHAR","SITAMARHI","SIWAN","SUPAUL","VAISHALI"],
+  "Chandigarh": ["CHANDIGARH"],
+  "Chhattisgarh": ["BALOD","BALODA BAZAR","BALRAMPUR","BASTAR","BEMETARA","BIJAPUR","BILASPUR","DANTEWADA","DHAMTARI","DURG","GARIYABAND","JANJGIR-CHAMPA"]
+};
+
+// ── Crop icons mapping ──
+const CROP_ICONS = {
+  "Rice": "🌾", "Wheat": "🌾", "Maize": "🌽", "Sugarcane": "🎋",
+  "Cotton": "🌿", "Jute": "🌿", "Groundnut": "🥜", "Soyabean": "🫘",
+  "Sunflower": "🌻", "Mustard": "🌼", "Potato": "🥔", "Onion": "🧅",
+  "Tomato": "🍅", "Chilli": "🌶️", "Turmeric": "🟡", "Ginger": "🫚",
+  "Banana": "🍌", "Mango": "🥭", "Coconut": "🥥", "Arhar/Tur": "🫘",
+  "Moong(Green Gram)": "🫘", "Urad": "🫘", "Sesamum": "🌿",
+  "Small millets": "🌾", "Linseed": "🌼", "default": "🌱"
+};
+
+function getCropIcon(name) {
+  return CROP_ICONS[name] || CROP_ICONS["default"];
+}
+
+// ── Floating background ──
+(function() {
+  const icons = ["🌾","🌽","🍅","🌿","🥜","🌻","🥔","🎋","🌼","🫘","🌱","🍃"];
+  const bg = document.getElementById('floatBg');
+  for (let i = 0; i < 20; i++) {
+    const s = document.createElement('span');
+    s.textContent = icons[Math.floor(Math.random() * icons.length)];
+    s.style.left = Math.random() * 100 + 'vw';
+    s.style.animationDuration = (12 + Math.random() * 20) + 's';
+    s.style.animationDelay    = -(Math.random() * 25) + 's';
+    s.style.fontSize = (1.5 + Math.random() * 2) + 'rem';
+    bg.appendChild(s);
+  }
+})();
+
+// ── Crop carousel ──
+(function() {
+  const crops = [
+    "Rice","Wheat","Maize","Sugarcane","Cotton","Jute","Groundnut","Soyabean",
+    "Sunflower","Mustard","Potato","Onion","Tomato","Arhar/Tur","Moong(Green Gram)",
+    "Urad","Sesamum","Small millets","Linseed","Bajra","Jowar","Ragi","Banana",
+    "Mango","Coconut","Chilli","Turmeric","Ginger","Brinjal","Cabbage"
+  ];
+  const track = document.getElementById('cropsTrack');
+  const all = [...crops, ...crops]; // duplicate for seamless loop
+  all.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'crop-chip';
+    div.innerHTML = `<span class="ce">${getCropIcon(c)}</span>${c}`;
+    track.appendChild(div);
+  });
+})();
+
+// ── Slider sync ──
+function syncSlider(id, valId, val, unit) {
+  document.getElementById(valId).textContent = val + unit;
+  const el = document.getElementById(id);
+  const min = +el.min, max = +el.max, v = +val;
+  el.style.setProperty('--val', ((v - min) / (max - min) * 100) + '%');
+}
+
+// ── Districts dropdown ──
+function updateDistricts() {
+  const state = document.getElementById('state').value;
+  const dSel  = document.getElementById('district');
+  dSel.innerHTML = '<option value="">— Select District —</option>';
+  if (state && STATE_DISTRICTS[state]) {
+    STATE_DISTRICTS[state].forEach(d => {
+      const o = document.createElement('option');
+      o.value = o.textContent = d;
+      dSel.appendChild(o);
+    });
+  }
+}
+
+// ── Aggregation lookups (mirrors Python logic) ──
+// These are rough medians pre-computed from the dataset for the demo.
+// In production, load agg_features.json from your backend.
+const AGG = {
+  global_yield_median: 1.67,
+  global_production_median: 2000,
+  global_area_median: 250,
+  district_season_yield: {
+    "('PATNA', 'Kharif')": 2.1, "('PATNA', 'Rabi')": 2.8,
+    "('GUNTUR', 'Kharif')": 3.2, "('GAYA', 'Kharif')": 1.9
+  },
+  state_season_yield: {
+    "('Bihar', 'Kharif')": 2.0, "('Bihar', 'Rabi')": 2.7,
+    "('Andhra Pradesh', 'Kharif')": 3.1, "('Assam', 'Whole Year')": 1.8
+  },
+  district_yield_mean:   { "PATNA": 2.2, "GUNTUR": 3.1, "GAYA": 1.9 },
+  district_yield_std:    { "PATNA": 0.8, "GUNTUR": 1.2, "GAYA": 0.7 },
+  state_yield_median:    { "Bihar": 2.0, "Andhra Pradesh": 3.0, "Assam": 1.8 },
+  season_area_median:    { "Kharif": 280, "Rabi": 210, "Whole Year": 350 }
+};
+
+// Simple crop recommendation logic (frontend demo)
+// In production, call your Flask/FastAPI backend that runs the actual pickle model.
+function frontendPredict(inputs) {
+  const { temp, humidity, soilMoisture, area, state, district, season, production } = inputs;
+
+  // Derived features (mirrors Python feature engineering)
+  const yield_val = production / (area + 1);
+  const dsKey = `('${district}', '${season}')`;
+  const ssKey = `('${state}', '${season}')`;
+  const dsYield = AGG.district_season_yield[dsKey] || AGG.global_yield_median;
+
+  // Heuristic scoring for demo (replace with actual model call via backend)
+  const seasonCrops = {
+    "Kharif":     [["Rice",0.38],["Maize",0.22],["Arhar/Tur",0.14],["Moong(Green Gram)",0.10],["Cotton",0.08],["Sugarcane",0.08]],
+    "Rabi":       [["Wheat",0.35],["Mustard",0.20],["Potato",0.15],["Linseed",0.12],["Onion",0.10],["Peas",0.08]],
+    "Whole Year": [["Sugarcane",0.30],["Banana",0.22],["Coconut",0.18],["Groundnut",0.16],["Sunflower",0.14]],
+    "Summer":     [["Groundnut",0.32],["Sunflower",0.25],["Maize",0.20],["Moong(Green Gram)",0.15],["Urad",0.08]],
+    "Winter":     [["Potato",0.30],["Onion",0.22],["Tomato",0.20],["Chilli",0.15],["Mustard",0.13]],
+    "Autumn":     [["Rice",0.40],["Maize",0.25],["Sesamum",0.20],["Small millets",0.15]]
+  };
+
+  // Adjust by temperature
+  let candidates = (seasonCrops[season] || seasonCrops["Kharif"]).map(([c,p]) => {
+    let adj = p;
+    if (temp > 35 && (c === "Rice" || c === "Sugarcane")) adj *= 1.2;
+    if (temp < 20 && (c === "Wheat" || c === "Mustard" || c === "Potato")) adj *= 1.25;
+    if (humidity > 75 && c === "Rice") adj *= 1.15;
+    if (soilMoisture > 60 && (c === "Rice" || c === "Sugarcane")) adj *= 1.1;
+    if (yield_val > dsYield * 1.5) adj *= 1.1;
+    return [c, adj];
+  });
+
+  // Normalise
+  const total = candidates.reduce((s,[,p]) => s+p, 0);
+  candidates = candidates.map(([c,p]) => [c, p/total]);
+  candidates.sort((a,b) => b[1]-a[1]);
+
+  const prodEst = area * yield_val * (0.85 + Math.random() * 0.3);
+
+  return {
+    best: candidates[0][0],
+    top3: candidates.slice(0,3),
+    production: Math.round(prodEst)
+  };
+}
+
+// ── Main prediction runner ──
+function runPrediction() {
+  const errEl   = document.getElementById('formError');
+  const errText = document.getElementById('errorText');
+  errEl.classList.add('hidden');
+
+  const state       = document.getElementById('state').value;
+  const district    = document.getElementById('district').value;
+  const season      = document.getElementById('season').value;
+  const temp        = +document.getElementById('temp').value;
+  const humidity    = +document.getElementById('humidity').value;
+  const soilMoisture= +document.getElementById('soilMoisture').value;
+  const area        = +document.getElementById('area').value;
+  const prodRaw     = document.getElementById('production').value;
+  const cropYear    = +document.getElementById('cropYear').value;
+  const production  = prodRaw ? +prodRaw : AGG.global_production_median;
+
+  // Validation
+  if (!state)    { showError('Please select a State.'); return; }
+  if (!district) { showError('Please select a District.'); return; }
+  if (!season)   { showError('Please select a Season.'); return; }
+  if (!area || area <= 0) { showError('Please enter a valid Area (> 0 hectares).'); return; }
+
+  // Loading state
+  const btn     = document.querySelector('.btn-predict');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btnText');
+  btn.disabled  = true;
+  spinner.style.display = 'block';
+  btnText.textContent   = 'Predicting...';
+
+  setTimeout(() => {
+    const result = frontendPredict({ temp, humidity, soilMoisture, area, state, district, season, production, cropYear });
+
+    // Populate results
+    document.getElementById('resCropIcon').textContent  = getCropIcon(result.best);
+    document.getElementById('resCropName').textContent  = result.best;
+    document.getElementById('resProduction').textContent= result.production.toLocaleString() + ' units';
+    document.getElementById('resTemp').textContent      = temp + '°C';
+    document.getElementById('resHumidity').textContent  = humidity + '%';
+    document.getElementById('resMoisture').textContent  = soilMoisture + '%';
+    document.getElementById('resArea').textContent      = area.toLocaleString();
+
+    // Top 3
+    const list = document.getElementById('top3List');
+    list.innerHTML = '';
+    result.top3.forEach(([crop, prob], idx) => {
+      const pct = (prob * 100).toFixed(1);
+      list.innerHTML += `
+        <div class="top3-item">
+          <span class="top3-rank rank-${idx+1}">${idx+1}</span>
+          <span class="top3-crop-icon">${getCropIcon(crop)}</span>
+          <span class="top3-crop-name">${crop}</span>
+          <div class="top3-bar-wrap">
+            <div class="top3-bar-bg">
+              <div class="top3-bar-fill" style="width:0" data-target="${pct}"></div>
+            </div>
+          </div>
+          <span class="top3-pct">${pct}%</span>
+        </div>`;
+    });
+
+    // Input summary chips
+    document.getElementById('inputChips').innerHTML = [
+      ['🏛️ State', state],
+      ['📌 District', district],
+      ['🗓️ Season', season],
+      ['🌡️ Temp', temp+'°C'],
+      ['💧 Humidity', humidity+'%'],
+      ['🌿 Soil', soilMoisture+'%'],
+      ['📐 Area', area+' ha'],
+      ['📅 Year', cropYear]
+    ].map(([k,v]) => `<span class="chip"><strong>${k}:</strong> ${v}</span>`).join('');
+
+    // Show card
+    const card = document.getElementById('resultCard');
+    card.classList.add('show');
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Animate bars
+    setTimeout(() => {
+      document.querySelectorAll('.top3-bar-fill').forEach(el => {
+        el.style.width = el.dataset.target + '%';
+      });
+    }, 200);
+
+    // Reset button
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    btnText.textContent   = '🌾 Predict Best Crop';
+
+  }, 1400);
+}
+
+function showError(msg) {
+  document.getElementById('errorText').textContent = msg;
+  document.getElementById('formError').classList.remove('hidden');
+}
+
+// ── Init sliders ──
+['temp','humidity','soilMoisture'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    const min = +el.min, max = +el.max, v = +el.value;
+    el.style.setProperty('--val', ((v - min) / (max - min) * 100) + '%');
+  }
+});
+</script>
+</body>
+</html>
