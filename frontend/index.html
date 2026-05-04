@@ -532,11 +532,17 @@
 <section class="hero">
   <div class="hero-text">
     <div class="badge-row">
+      <span class="badge badge-green">🤖 Random Forest AI</span>
       <span class="badge badge-yellow">📍 Region-Aware</span>
       <span class="badge badge-orange">🌦️ Climate-Sensitive</span>
     </div>
     <h1>Grow Smarter with <span>Intelligent</span> Crop Prediction</h1>
-    <p>Enter your land's climate conditions, state, and district — our model recommends the best crop to grow.</p>
+    <p>Enter your land's climate conditions, state, and district — our Random Forest model (trained on 50,000+ records) recommends the best crop with <strong>85%+ accuracy</strong>.</p>
+    <div class="accuracy-badge">
+      <span>🎯</span>
+      <span class="pct">85%+</span>
+      <span>Model Accuracy</span>
+    </div>
   </div>
   <div class="hero-visual">
     <div class="hero-circle">
@@ -550,10 +556,10 @@
 
 <!-- Stats -->
 <div class="stats">
-  <!-- <div class="stat"><div class="num">50K+</div><div class="lbl">Training Records</div></div> -->
+  <div class="stat"><div class="num">50K+</div><div class="lbl">Training Records</div></div>
   <div class="stat"><div class="num">77</div><div class="lbl">Crop Types</div></div>
   <div class="stat"><div class="num">25</div><div class="lbl">ML Features</div></div>
-  <!-- <div class="stat"><div class="num">85%+</div><div class="lbl">Accuracy (RF)</div></div> -->
+  <div class="stat"><div class="num">85%+</div><div class="lbl">Accuracy (RF)</div></div>
   <div class="stat"><div class="num">7</div><div class="lbl">Indian States</div></div>
 </div>
 
@@ -600,6 +606,8 @@
           <label><span class="ico">🗓️</span> Season</label>
           <select id="season">
             <option value="">— Select Season —</option>
+            <option>Kharif</option>
+            <option>Rabi</option>
             <option>Whole Year</option>
             <option>Summer</option>
             <option>Winter</option>
@@ -650,7 +658,7 @@
       </div>
 
       <!-- Production -->
-      <!-- <div class="field-group-title">
+      <div class="field-group-title">
         <span>📦 Production Estimate (optional)</span><div class="line"></div>
       </div>
       <div class="grid-2">
@@ -662,7 +670,7 @@
           <label><span class="ico">📅</span> Crop Year</label>
           <input type="number" id="cropYear" value="2014" min="1997" max="2030">
         </div>
-      </div> -->
+      </div>
 
       <div id="formError" class="error-msg hidden">⚠️ <span id="errorText"></span></div>
 
